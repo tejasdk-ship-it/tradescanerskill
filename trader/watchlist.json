@@ -1,0 +1,27 @@
+{
+  "created_by": "trader-scanner",
+  "created_at": "2026-10-23T10:01:53Z",
+  "mode": "daily",
+  "as_of": "2026-10-22 close",
+  "universe": 12,
+  "scanned": 12,
+  "failed": 0,
+  "source": "yahoo",
+  "filters": {
+    "min_price": 5.0,
+    "min_volume": 1000000
+  },
+  "note": "A scan is a list of charts that match a rule, not a list of stocks to buy.",
+  "hits": [
+    {
+      "symbol": "AAPL",
+      "setups": [
+        "breakout_20d"
+      ],
+      "price": 348.22,
+      "close_date": "2026-10-22",
+      "rsi": 64.5,
+      "volume": 46845411
+    }
+  ]
+}

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeScanner Terminal | Real-Time Market Setup & ORB Scanner</title>
+  <meta name="description" content="Professional-grade real-time market scanner for US equities: 20-day breakouts, bull flags, MA20 reclaim, oversold bounces, and 5-minute opening-range breakouts (ORB).">
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Canvas-based lightweight interactive chart library (Chart.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation & Live Ticker Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-logo">
+        <div class="logo-icon-pulse">
+          <i data-lucide="radar"></i>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">TRADE<span>SCANNER</span> <span class="badge-version">v2.4 PRO</span></div>
+          <div class="brand-sub">Algorithmic Setups & Opening-Range Breakouts</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Market Clock & Status -->
+    <div class="header-center">
+      <div class="market-status-pill" id="market-status-pill">
+        <span class="status-indicator-dot" id="market-dot"></span>
+        <span class="market-phase-text" id="market-phase-text">Connecting...</span>
+        <span class="market-time-text" id="market-time-text">--:-- ET</span>
+      </div>
+    </div>
+
+    <!-- Actions & Guide Toggle -->
+    <div class="header-right">
+      <button class="btn-ghost" id="btn-open-guide">
+        <i data-lucide="book-open"></i> How to Use & Steps
+      </button>
+      <button class="btn-ghost" id="btn-universe-modal">
+        <i data-lucide="database"></i> Universe (<span id="nav-universe-count">5,943</span>)
+      </button>
+      <a href="https://github.com/Jakeschincariol/day-trader-skill" target="_blank" class="btn-icon" title="View Source Docs">
+        <i data-lucide="external-link"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- Live Mini Ticker Tape -->
+  <div class="ticker-tape-container">
+    <div class="ticker-tape-track" id="ticker-tape-track">
+      <span class="tape-item"><span class="tape-sym">AAPL</span> $248.22 <span class="tape-up">+1.4%</span></span>
+      <span class="tape-item"><span class="tape-sym">NVDA</span> $138.90 <span class="tape-up">+2.8%</span></span>
+      <span class="tape-item"><span class="tape-sym">MSFT</span> $425.10 <span class="tape-down">-0.3%</span></span>
+      <span class="tape-item"><span class="tape-sym">TSLA</span> $220.45 <span class="tape-up">+4.1%</span></span>
+      <span class="tape-item"><span class="tape-sym">AMZN</span> $188.60 <span class="tape-up">+0.9%</span></span>
+      <span class="tape-item"><span class="tape-sym">META</span> $585.30 <span class="tape-up">+1.2%</span></span>
+      <span class="tape-item"><span class="tape-sym">AMD</span> $154.20 <span class="tape-down">-1.1%</span></span>
+      <span class="tape-item"><span class="tape-sym">PLTR</span> $43.80 <span class="tape-up">+5.3%</span></span>
+      <span class="tape-item"><span class="tape-sym">COIN</span> $215.70 <span class="tape-up">+3.6%</span></span>
+    </div>
+  </div>
+
+  <!-- Main Application Body -->
+  <main class="app-layout">
+    <!-- Left Sidebar: Scan Controller -->
+    <aside class="control-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title"><i data-lucide="sliders"></i> Scan Configuration</div>
+        <button class="btn-reset-filters" id="btn-reset-config" title="Reset to defaults">Reset</button>
+      </div>
+
+      <!-- Mode Selector -->
+      <div class="control-group">
+        <label class="control-label">Scan Type / Strategy</label>
+        <div class="mode-switch-grid">
+          <button class="mode-tab active" data-mode="daily" id="mode-tab-daily">
+            <i data-lucide="sun"></i>
+            <div>
+              <strong>Daily Setups</strong>
+              <span>Pre-market & Daily closes</span>
+            </div>
+          </button>
+          <button class="mode-tab" data-mode="orb" id="mode-tab-orb">
+            <i data-lucide="zap"></i>
+            <div>
+              <strong>Intraday ORB</strong>
+              <span>Opening-Range Breakouts (5m)</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Target Universe / Source Selector -->
+      <div class="control-group">
+        <label class="control-label">Symbol Universe Source</label>
+        <div class="segmented-control">
+          <button class="segment-btn active" data-source="presets">Presets</button>
+          <button class="segment-btn" data-source="custom">Custom</button>
+          <button class="segment-btn" data-source="universe">All (5,943)</button>
+        </div>
+      </div>
+
+      <!-- Preset Picker -->
+      <div class="control-group" id="preset-selector-group">
+        <label class="control-label">Curated Watchlist Preset</label>
+        <select class="form-select" id="preset-select">
+          <option value="mega_tech">Mega-Cap Tech Titans (AAPL, NVDA, MSFT...)</option>
+          <option value="momentum">High Beta Momentum (PLTR, COIN, MSTR...)</option>
+          <option value="semis">Semiconductors (NVDA, AMD, TSM, AVGO...)</option>
+          <option value="sp_leaders">S&P 50 Core Leaders</option>
+          <option value="etfs_indices">Index Proxies (SPY, QQQ, IWM...)</option>
+        </select>
+        <div class="preset-preview" id="preset-preview-pills"></div>
+      </div>
+
+      <!-- Custom Symbols Input -->
+      <div class="control-group hidden" id="custom-symbols-group">
+        <label class="control-label">Custom Tickers (comma-separated)</label>
+        <input type="text" class="form-input" id="custom-symbols-input" placeholder="e.g. AAPL, TSLA, NVDA, COIN, PLTR, AMD" value="AAPL, TSLA, NVDA, AMD, META, AMZN, MSFT">
+        <div class="field-hint">Enter 1 to 50 US stock tickers.</div>
+      </div>
+
+      <!-- Limit for Universe -->
+      <div class="control-group hidden" id="universe-limit-group">
+        <label class="control-label">Limit Universe Scan</label>
+        <select class="form-select" id="universe-limit-select">
+          <option value="50">Fast Scan (First 50 symbols)</option>
+          <option value="150" selected>Standard Scan (First 150 symbols)</option>
+          <option value="300">Deep Scan (First 300 symbols)</option>
+          <option value="1000">Heavy Scan (First 1,000 symbols)</option>
+        </select>
+        <div class="field-hint">Yahoo limits spark queries to 20/req with polite pauses.</div>
+      </div>
+
+      <!-- Liquidity Filters -->
+      <div class="control-group">
+        <label class="control-label">Liquidity Thresholds</label>
+        <div class="inputs-row">
+          <div class="input-col">
+            <span class="sub-label">Min Price ($)</span>
+            <input type="number" class="form-input" id="min-price-input" value="5" min="0" step="0.5">
+          </div>
+          <div class="input-col">
+            <span class="sub-label">Min Volume</span>
+            <select class="form-select" id="min-volume-select">
+              <option value="0">0 (Any volume)</option>
+              <option value="500000">500,000</option>
+              <option value="1000000" selected>1,000,000 (1M+)</option>
+              <option value="2000000">2,000,000 (2M+)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ORB Specific Options -->
+      <div class="control-group hidden" id="orb-options-group">
+        <label class="control-label">ORB Parameters</label>
+        <div class="inputs-row">
+          <div class="input-col">
+            <span class="sub-label">Range Period</span>
+            <select class="form-select" id="orb-minutes-select">
+              <option value="15" selected>15 Minutes (9:30 - 9:45)</option>
+              <option value="30">30 Minutes (9:30 - 10:00)</option>
+            </select>
+          </div>
+          <div class="input-col">
+            <span class="sub-label">Clock Cutoff (ET)</span>
+            <input type="text" class="form-input" id="orb-at-input" placeholder="e.g. 10:15 (Optional)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Execution Action -->
+      <div class="sidebar-action-wrap">
+        <button class="btn-primary-action" id="btn-run-scan">
+          <span class="btn-icon-wrapper"><i data-lucide="play" id="btn-scan-icon"></i></span>
+          <span class="btn-text" id="btn-scan-text">Execute Live Scan</span>
+        </button>
+
+        <!-- Live Scanner Progress Bar -->
+        <div class="scan-progress-box hidden" id="scan-progress-box">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+          <div class="progress-status-msg" id="progress-status-msg">Initializing connection...</div>
+        </div>
+      </div>
+
+      <!-- Live Terminal / Engine Log Accordion -->
+      <div class="sidebar-log-drawer">
+        <div class="log-drawer-header" id="log-drawer-toggle">
+          <span><i data-lucide="terminal"></i> Engine Live Output</span>
+          <i data-lucide="chevron-down" id="log-chevron"></i>
+        </div>
+        <div class="log-drawer-body" id="log-drawer-body">
+          <div class="log-console" id="log-console">
+            <div class="log-line text-muted">[System ready. Click Execute Live Scan to start scanning.]</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Content: Setup Results Matrix & Charts -->
+    <section class="main-content-panel">
+      <!-- Top Metrics Dashboard Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon-wrap icon-purple"><i data-lucide="sparkles"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Matching Setups</span>
+            <div class="metric-value" id="stat-hits-count">0</div>
+          </div>
+          <div class="metric-badge" id="stat-hits-badge">Ready</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-wrap icon-blue"><i data-lucide="crosshair"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Charts Scanned</span>
+            <div class="metric-value" id="stat-scanned-count">0</div>
+          </div>
+          <div class="metric-sub" id="stat-universe-sub">Universe: 5,943</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-wrap icon-green"><i data-lucide="trending-up"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Breakouts (20D / ORB)</span>
+            <div class="metric-value" id="stat-breakouts-count">0</div>
+          </div>
+          <div class="metric-sub">Momentum triggers</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-wrap icon-amber"><i data-lucide="shield-alert"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Oversold & Reversals</span>
+            <div class="metric-value" id="stat-oversold-count">0</div>
+          </div>
+          <div class="metric-sub">Mean-reversion setups</div>
+        </div>
+      </div>
+
+      <!-- Results Filter Bar -->
+      <div class="results-toolbar">
+        <div class="filter-chips" id="filter-chips">
+          <button class="chip active" data-filter="all">All Setups (<span id="chip-count-all">0</span>)</button>
+          <button class="chip chip-breakout" data-filter="breakout_20d">20D Breakout (<span id="chip-count-breakout">0</span>)</button>
+          <button class="chip chip-bullflag" data-filter="bull_flag">Bull Flag (<span id="chip-count-flag">0</span>)</button>
+          <button class="chip chip-reclaim" data-filter="reclaim_ma20">MA20 Reclaim (<span id="chip-count-reclaim">0</span>)</button>
+          <button class="chip chip-oversold" data-filter="oversold">Oversold / Bounce (<span id="chip-count-oversold">0</span>)</button>
+          <button class="chip chip-orb" data-filter="orb">ORB Hits (<span id="chip-count-orb">0</span>)</button>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="search-input-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="filter-search-input" placeholder="Search ticker or name...">
+          </div>
+          <button class="btn-tool" id="btn-reload-watchlist" title="Reload saved watchlist">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+          <button class="btn-tool" id="btn-export-csv" title="Export results to CSV">
+            <i data-lucide="download"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Table View -->
+      <div class="table-container">
+        <table class="data-table" id="results-table">
+          <thead>
+            <tr>
+              <th width="12%">Ticker</th>
+              <th width="16%">Last Price</th>
+              <th width="32%">Detected Setups / Triggers</th>
+              <th width="14%">RSI (14)</th>
+              <th width="14%">Volume</th>
+              <th width="12%" style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="results-table-body">
+            <!-- Populated via Javascript -->
+            <tr class="empty-state-row">
+              <td colspan="6">
+                <div class="empty-state-card">
+                  <div class="empty-icon"><i data-lucide="radar"></i></div>
+                  <h3>No Scans Executed Yet</h3>
+                  <p>Select your preferred preset or ticker list on the left, then click <strong>"Execute Live Scan"</strong> to identify setups in real time.</p>
+                  <button class="btn-primary-small" id="btn-quick-start">
+                    <i data-lucide="zap"></i> Quick Scan Mega-Cap Tech (12 Titans)
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Disclaimer Footer -->
+      <footer class="results-footer">
+        <i data-lucide="info"></i>
+        <span><strong>Trading Notice:</strong> A scan is a list of charts that match algorithmic rules, not a list of stocks to buy, and a setup on a chart is not a prediction. Always practice strict risk management and position sizing.</span>
+      </footer>
+    </section>
+  </main>
+
+  <!-- Interactive Stock Chart & Details Modal -->
+  <div class="modal-backdrop hidden" id="chart-modal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-symbol-badge" id="modal-sym-badge">AAPL</div>
+          <div>
+            <h2 class="modal-stock-title" id="modal-stock-title">Apple Inc.</h2>
+            <div class="modal-stock-meta" id="modal-stock-meta">Last: $248.22 | 20D Breakout</div>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btn-close-chart-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <!-- Quick stats summary row -->
+        <div class="stock-stats-row" id="modal-stats-row">
+          <div class="stat-box">
+            <span class="stat-box-label">Regular Market Price</span>
+            <span class="stat-box-val" id="modal-stat-price">$0.00</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-label">52-Week High</span>
+            <span class="stat-box-val" id="modal-stat-52h">$0.00</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-label">52-Week Low</span>
+            <span class="stat-box-val" id="modal-stat-52l">$0.00</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-label">Volume</span>
+            <span class="stat-box-val" id="modal-stat-volume">--</span>
+          </div>
+        </div>
+
+        <!-- Chart Canvas Container -->
+        <div class="chart-canvas-container">
+          <canvas id="stock-chart-canvas"></canvas>
+        </div>
+
+        <!-- Setup Explanation & Plan -->
+        <div class="setup-explanation-box" id="modal-setup-explanation">
+          <h4><i data-lucide="crosshair"></i> Algorithmic Setup Analysis</h4>
+          <p id="modal-setup-desc">Analyzing...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a href="#" target="_blank" class="btn-secondary" id="modal-btn-tradingview">
+          <i data-lucide="trending-up"></i> Open TradingView Chart
+        </a>
+        <a href="#" target="_blank" class="btn-secondary" id="modal-btn-yahoo">
+          <i data-lucide="external-link"></i> View on Yahoo Finance
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step-by-Step Usage Guide Modal / Drawer -->
+  <div class="modal-backdrop hidden" id="guide-modal">
+    <div class="modal-dialog modal-md">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="guide-icon-badge"><i data-lucide="compass"></i></div>
+          <div>
+            <h2 class="modal-stock-title">TradeScanner Operating Guide</h2>
+            <div class="modal-stock-meta">Step-by-step instructions for daily routines and setup trading</div>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btn-close-guide-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body guide-content">
+        <!-- Step 1 -->
+        <div class="guide-step-card">
+          <div class="step-num-pill">Step 1</div>
+          <div class="step-details">
+            <h3>Pre-Market Preparation (8:00 AM – 9:25 AM ET)</h3>
+            <p>Run the <strong>Daily Setups Scan</strong> before the market opens to identify high-probability candidates:</p>
+            <ul>
+              <li><strong>20-Day Breakout:</strong> The latest close broke higher than the highest close of the past 20 trading sessions.</li>
+              <li><strong>Bull Flag:</strong> Surged >10% over 10 sessions, followed by tight consolidation within a 5% range over the last 5 days.</li>
+              <li><strong>Reclaim MA20:</strong> Previously closed below its 20-day simple moving average and just pushed back above it.</li>
+              <li><strong>Oversold & Bounce:</strong> Wilder 14-period RSI dipped under 30 (extreme fear) and closed higher today.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="guide-step-card">
+          <div class="step-num-pill">Step 2</div>
+          <div class="step-details">
+            <h3>Opening Range Establishment (9:30 AM – 9:45 AM ET)</h3>
+            <p>Wait for the opening 15 minutes of regular market hours. During this period, institutions, algorithms, and market makers establish the session's initial high and low.</p>
+            <div class="tip-box">
+              <i data-lucide="lightbulb"></i>
+              <span><strong>Rule of Thumb:</strong> Do NOT chase blind market orders during the first 5 minutes of regular hours. Let the range print first.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="guide-step-card">
+          <div class="step-num-pill">Step 3</div>
+          <div class="step-details">
+            <h3>Execute the ORB Scan (After 9:50 AM ET)</h3>
+            <p>Switch the scan mode to <strong>Intraday ORB</strong> and click <strong>Execute Live Scan</strong>:</p>
+            <ul>
+              <li>The scanner checks 5-minute bars across your selected stocks.</li>
+              <li>A valid breakout occurs only when a completed 5-minute bar <strong>CLOSES strictly above</strong> the highest high of the 15-minute opening range.</li>
+              <li>Notice the timestamp (e.g. <code>09:55</code>, <code>10:05</code>) indicating exact trigger time.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="guide-step-card">
+          <div class="step-num-pill">Step 4</div>
+          <div class="step-details">
+            <h3>Risk Management & Execution Protocol</h3>
+            <p>A scan is a filter, not an automated buy order. Execute with disciplined structure:</p>
+            <div class="trade-rules-grid">
+              <div class="rule-box">
+                <span class="rule-title">Entry</span>
+                <span class="rule-desc">First bar closing above opening range high or retest of range high.</span>
+              </div>
+              <div class="rule-box">
+                <span class="rule-title">Stop Loss</span>
+                <span class="rule-desc">Midpoint of opening range, or lowest point of the breakout candle.</span>
+              </div>
+              <div class="rule-box">
+                <span class="rule-title">Target</span>
+                <span class="rule-desc">2:1 to 3:1 Reward-to-Risk ratio or previous daily resistance.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="guide-step-card">
+          <div class="step-num-pill">Step 5</div>
+          <div class="step-details">
+            <h3>Command-Line Execution (Optional)</h3>
+            <p>If you prefer running scans from your terminal, use:</p>
+            <pre class="code-snippet"><code>python scan.py universe                      # Updates 5,943 symbols
+python scan.py daily --symbols AAPL,NVDA,TSLA # Fast daily scan
+python scan.py orb --at 10:15                 # Cutoff at 10:15 AM ET</code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary-action" id="btn-guide-start-scan">
+          <i data-lucide="play"></i> Got it, Start Scanning Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universe Inspector Modal -->
+  <div class="modal-backdrop hidden" id="universe-modal">
+    <div class="modal-dialog modal-md">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="guide-icon-badge"><i data-lucide="database"></i></div>
+          <div>
+            <h2 class="modal-stock-title">US Symbol Universe</h2>
+            <div class="modal-stock-meta">Nasdaq & Other listed common stocks, ordinary shares & ADRs</div>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btn-close-universe-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="universe-controls-row">
+          <div class="search-input-wrap flex-1">
+            <i data-lucide="search"></i>
+            <input type="text" id="universe-search-input" placeholder="Search universe by ticker or company name...">
+          </div>
+          <button class="btn-secondary" id="btn-rebuild-universe">
+            <i data-lucide="refresh-cw"></i> Rebuild from Nasdaq
+          </button>
+        </div>
+        <div class="universe-list-container" id="universe-list-container">
+          <!-- Populated via Javascript -->
+          <div class="text-center p-4 text-muted">Loading symbol directory...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>
